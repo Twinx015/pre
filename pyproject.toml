@@ -1,12 +1,10 @@
 [project]
-name = "pre"
+name = "pre-twinx"
 version = "0.1.0"
-description = "Add your description here"
+description = "A single tool to manage multiple things"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "rich>=13.0",
-]
+dependencies = ["rich>=13.0"]
 
 [project.scripts]
 pre = "pre.main:main"
