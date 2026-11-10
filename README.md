@@ -4,6 +4,7 @@ A small command-line toolbox for everyday project work:
 
 - **`pre new`** — scaffold projects from templates or builtins, then optionally commit and publish them.
 - **`pre strip`** — remove comments from source files, safely and across many languages.
+- **`pre ansii`** — render text as large ANSI/ASCII art banners.
 - **`pre git clone`** — clone repositories into your configured base or a throwaway temp directory.
 - **`pre config`** — inspect and create the TOML configuration.
 
@@ -30,8 +31,11 @@ pre new --sample                  # optional: install the python-cli example tem
 pre new uv my-app                 # scaffold a project from a builtin
 pre strip --check .               # see whether comments would be removed
 pre strip --show-deleted .        # strip and print a diff of removed lines
+pre ansii "pre"                   # render a text-art banner
 pre git clone owner/repo          # clone into paths.base
 ```
+
+Show the logo and version with `pre -V` (or `pre --version`).
 
 ## Configuration
 
@@ -50,6 +54,10 @@ tmp = "/tmp"
 # Template or builtin used when `pre new` gets no template argument.
 # Leave empty to always prompt.
 default_template = ""
+
+[ansii]
+# Default style used by `pre ansii` (see `pre ansii --list-styles`).
+style = "block"
 
 [strip]
 # Print a diff of removed lines for every changed file.
@@ -197,6 +205,62 @@ Details:
 Exit codes: `0` success, `1` changes found with `--check`, `2` one or more files
 failed.
 
+## `pre ansii`
+
+Render text as a large text-art banner:
+
+```bash
+pre ansii "hello"
+pre ansii hello world --style 3d
+pre ansii deploy -s bloody --color '#ff5f5f'
+pre ansii "pre" -s block -o banner.txt
+pre ansii view                    # preview every style with "pre"
+pre ansii view hello              # preview every style with "hello"
+pre ansii view -s ansi-shadow     # preview one style
+pre ansii --list-styles
+```
+
+Options:
+
+| Option | Meaning |
+| --- | --- |
+| `-s, --style STYLE` | Art style, alias, or raw pyfiglet font (default: config `ansii.style`, else `block`) |
+| `-o, --output PATH` | Write to a file instead of stdout (`-` means stdout) |
+| `--force` | Overwrite an existing output file |
+| `-c, --color HEX/NAME` | Color the banner (hex like `#ff5f5f`, or a color name like `red`) |
+| `-l, --list-styles` | List the curated styles |
+
+If no text is given, `pre ansii` reads piped stdin or prompts interactively.
+Output files are written atomically, and parent directories are created as
+needed. Without `--force`, an existing output file is never overwritten.
+
+`pre ansii view [TEXT]` renders every curated style using `TEXT` (default
+`pre`). Combine it with `--style` to preview a single style, `--color` to see it
+colored, or `--output` to save the gallery. Besides the curated names below, any
+of the 571 pyfiglet font names can be passed to `--style` (for example
+`future_1` or `banner3-D`).
+
+Styles include: `block`, `bloody`, `3d`, `3d-ascii`, `3d-diagonal`,
+`3d-henry`, `3d-larry`, `shadow`, `bubble`, `digital`, `slant`, `small`, `big`,
+`mini`, `ansi`, `ansi-shadow`, `banner`, `banner3d`, `barbwire`, `binary`,
+`blocky`, `braille`, `broadway`, `caligraphy`, `catwalk`, `chunky`, `circle`,
+`coinstak`, `colossal`, `computer`, `contessa`, `cricket`, `cursive`,
+`cyberlarge`, `diamond`, `doom`, `dotmatrix`, `double`, `drpepper`, `emboss`,
+`epic`, `fender`, `fraktur`, `fuzzy`, `gothic`, `graffiti`, `hollywood`,
+`isometric`, `italic`, `katakana`, `lcd`, `lean`, `letters`, `linux`, `madrid`,
+`marquee`, `morse`, `ogre`, `poison`, `puffy`, `rectangles`, `relief`, `roman`,
+`rounded`, `runic`, `script`, `serifcap`, `short`, `slide`, `small-caps`,
+`small-shadow`, `speed`, `stacey`, `standard`, `starwars`, `stencil`, `stop`,
+`straight`, `tanja`, `thick`, `thin`, `ticks`, `tinker-toy`, `tombstone`,
+`train`, `trek`, `tubular`, `twisted`, `univers`, `usaflag`, `wavy`, `weird`,
+`whimsy`, `zigzag`.
+
+Aliases such as `ansii`, `ansii-shadow`, and `3d-ansii` also work.
+
+Without `--color`, the output is plain UTF-8 text. With `--color`, 24-bit ANSI
+escape codes are included; this also applies when writing to a file, so `cat`
+will show colored output.
+
 ## `pre git clone`
 
 ```bash
@@ -217,6 +281,7 @@ cloned into `paths.base`; with `--tmp`, a new `clone_*` directory is created und
 | --- | --- |
 | `strip` | `0` ok, `1` `--check` found changes, `2` file errors |
 | `new` | `0` ok, `1` failure, `130` cancelled |
+| `ansii` | `0` ok, `1` bad input/color, existing output without `--force`, or write failure |
 | `git clone` | `0` ok, `1` failure |
 | `config` | `0` ok, `1` could not write config |
 
@@ -237,5 +302,6 @@ pre/
     config.py     TOML config loading/validation
     projects.py   templates, scaffolding, project prompts
     comments.py   comment-stripping engine
+    ansii.py      ANSI/ASCII text art rendering
     git.py        clone, initial commit, GitHub publishing
 ```

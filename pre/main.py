@@ -2,14 +2,59 @@
 
 import argparse
 import sys
+from importlib.metadata import PackageNotFoundError, packages_distributions
+from importlib.metadata import version as package_version
+
+from rich.console import Console
+from rich.markup import escape
 
 try:
-    from . import comments, config, git, projects
+    from . import ansii, comments, config, git, projects
 except ImportError:  # running as a plain script: python pre/main.py
+    import ansii
     import comments
     import config
     import git
     import projects
+
+console = Console()
+
+
+def _detect_version() -> str:
+    for dist in packages_distributions().get("pre", []):
+        try:
+            return package_version(dist)
+        except PackageNotFoundError:
+            continue
+    return "0.1.0"
+
+
+__version__ = _detect_version()
+
+LOGO = """\
+ ██▓███   ██▀███  ▓█████
+▓██░  ██▒▓██ ▒ ██▒▓█   ▀
+▓██░ ██▓▒▓██ ░▄█ ▒▒███
+▒██▄█▓▒ ▒▒██▀▀█▄  ▒▓█  ▄
+▒██▒ ░  ░░██▓ ▒██▒░▒████▒
+▒▓▒░ ░  ░░ ▒▓ ░▒▓░░░ ▒░ ░
+░▒ ░       ░▒ ░ ▒░ ░ ░  ░
+░░         ░░   ░    ░
+            ░        ░  ░
+"""
+
+
+def version_text() -> str:
+    return f"{LOGO}\npre {__version__}"
+
+
+class VersionAction(argparse.Action):
+    """Print the logo verbatim; argparse's version action reflows newlines."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(version_text())
+        parser.exit()
+
 
 
 def run_strip(args, cfg):
@@ -44,6 +89,44 @@ def run_config(args, cfg):
     return 0
 
 
+def run_ansii(args, cfg):
+    if args.list_styles:
+        ansii.show_styles()
+        return 0
+
+    if args.text and args.text[0] == "view":
+        sample = " ".join(args.text[1:]).strip() or "pre"
+        try:
+            gallery = ansii.render_view(
+                sample, style=args.style, color=args.color
+            )
+        except ValueError as exc:
+            console.print(f"[red]x {escape(str(exc))}[/]")
+            return 1
+        return 0 if ansii.write_output(gallery, args.output, force=args.force) else 1
+
+    text = ansii.resolve_text(args.text)
+    if not text:
+        console.print("[red]x no text provided[/]")
+        return 1
+
+    style = args.style or cfg["ansii"]["style"]
+    try:
+        art = ansii.render(text, style)
+    except ValueError as exc:
+        console.print(f"[red]x {escape(str(exc))}[/]")
+        return 1
+
+    if args.color:
+        try:
+            art = ansii.colorize(art, args.color)
+        except ValueError as exc:
+            console.print(f"[red]x {escape(str(exc))}[/]")
+            return 1
+
+    return 0 if ansii.write_output(art, args.output, force=args.force) else 1
+
+
 def run_clone(args, cfg):
     if args.tmp:
         target = git.clone(
@@ -65,6 +148,13 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="pre",
         description="Create projects and keep source trees tidy.",
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action=VersionAction,
+        nargs=0,
+        help="show the version and logo",
     )
     parser.add_argument(
         "--config",
@@ -187,6 +277,47 @@ def build_parser():
         "--new-template", metavar="NAME", help="scaffold an empty template"
     )
     new.set_defaults(func=projects.run_new)
+
+    ansii_cmd = sub.add_parser(
+        "ansii",
+        help="render text as ANSI/ASCII art",
+        description="Render text as a large text-art banner.",
+    )
+    ansii_cmd.add_argument(
+        "text",
+        nargs="*",
+        metavar="TEXT",
+        help="text to render, or 'view' to preview all styles",
+    )
+    ansii_cmd.add_argument(
+        "-s",
+        "--style",
+        metavar="STYLE",
+        default=None,
+        help="art style or pyfiglet font (default: config ansii.style; see --list-styles)",
+    )
+    ansii_cmd.add_argument(
+        "-o",
+        "--output",
+        metavar="PATH",
+        help="write to PATH instead of stdout ('-' means stdout)",
+    )
+    ansii_cmd.add_argument(
+        "--force", action="store_true", help="overwrite an existing output file"
+    )
+    ansii_cmd.add_argument(
+        "-c",
+        "--color",
+        metavar="HEX/NAME",
+        help="color the banner (e.g. '#ff5f5f' or 'red')",
+    )
+    ansii_cmd.add_argument(
+        "-l",
+        "--list-styles",
+        action="store_true",
+        help="list the available styles",
+    )
+    ansii_cmd.set_defaults(func=run_ansii)
 
     git_cmd = sub.add_parser(
         "git",

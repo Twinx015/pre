@@ -23,6 +23,9 @@ DEFAULTS = {
     "projects": {
         "default_template": "",
     },
+    "ansii": {
+        "style": "block",
+    },
     "strip": {
         "show_deleted": False,
         "squeeze": False,
@@ -46,6 +49,10 @@ tmp = "/tmp"
 # Template or builtin used when `pre new` gets no template argument.
 # Leave empty to always prompt.
 default_template = ""
+
+[ansii]
+# Default style for `pre ansii` (see `pre ansii --list-styles`).
+style = "block"
 
 [strip]
 # Print a diff of removed lines for every changed file.
